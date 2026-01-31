@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Warhammer Launchpad</title>
+<style>
+  :root{
+    --bg:#0a0b0d;             /* void black */
+    --bg-2:#121418;           /* deeper panel */
+    --ink:#e5e7eb;            /* pale parchment */
+    --muted:#9aa0a6;          /* ash */
+    --gold:#c6a664;           /* tarnished gold */
+    --red:#b12a2a;            /* warning red */
+    --accent:#364b6b;         /* steel blue */
+    --accent-2:#1f2a44;       /* darker steel */
+    --glow:0 0 24px rgba(198,166,100,.25);
+    --ring:0 0 0 1px rgba(198,166,100,.35), 0 0 18px rgba(198,166,100,.2) inset;
+    --radius:10px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body{
+    margin:0;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 800px at 10% -10%, #1a1c21 0%, transparent 60%),
+      radial-gradient(900px 600px at 110% 110%, #1a1c21 0%, transparent 60%),
+      linear-gradient(180deg, #0a0b0d 0%, #0a0b0d 100%);
+    font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    overflow:hidden;
+  }
+
+  /* Layout */
+  .wrap{
+    display:grid;
+    grid-template-columns: 300px 1fr;
+    grid-template-rows: 64px 1fr;
+    height:100%;
+  }
+
+  header{
+    grid-column: 1 / -1;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    padding:12px 16px;
+    border-bottom:1px solid #20232a;
+    background:linear-gradient(180deg, rgba(198,166,100,.06), transparent 30%);
+  }
+
+  .sigil{
+    width:36px; height:36px;
+    display:grid; place-items:center;
+    background:linear-gradient(180deg, #2a2d33, #17191f);
+    border:1px solid #3b3f47;
+    border-radius:6px;
+    box-shadow: var(--ring);
+  }
+  .sigil svg{ width:26px; height:26px; display:block; }
+
+  .title{
+    display:flex; flex-direction:column;
+    line-height:1.15;
+  }
+  .title strong{
+    letter-spacing:.06em;
+    font-weight:800;
+    text-transform:uppercase;
+  }
+  .subtitle{
+    color:var(--muted);
+    font-size:.9rem;
+  }
+
+  /* Sidebar */
+  aside{
+    grid-row: 2;
+    background: linear-gradient(180deg, var(--bg-2), #0e1013 60%, #0b0c0f);
+    border-right:1px solid #20232a;
+    padding:16px;
+    overflow:auto;
+  }
+
+  .panel{
+    background:linear-gradient(180deg, rgba(54,75,107,.14), rgba(31,42,68,.1));
+    border:1px solid #2a3242;
+    border-radius: var(--radius);
+    padding:12px;
+    box-shadow: var(--glow);
+  }
+
+  .panel h2{
+    margin:0 0 10px 0; font-size: .95rem; color: var(--gold);
+    letter-spacing:.08em; text-transform:uppercase; font-weight:700;
+    display:flex; align-items:center; gap:8px;
+  }
+
+  .btn{
+    appearance:none; border:1px solid #2a3242; color:var(--ink);
+    background:linear-gradient(180deg, #1a2234, #141a27);
+    padding:8px 10px; border-radius:8px; cursor:pointer;
+    font-weight:600; letter-spacing:.02em;
+    transition:.2s transform, .2s box-shadow, .2s background;
+  }
+  .btn:hover{ transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+  .btn:active{ transform: translateY(0); }
+
+  .controls{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+
+  .input{
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .input label{ font-size:.8rem; color:var(--muted); letter-spacing:.04em; }
+  .input input{
+    width:100%;
+    padding:8px 10px; border-radius:8px;
+    border:1px solid #2a3242;
+    background:#0c0e13; color:var(--ink);
+    outline:none;
+  }
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .grid-3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .stack{ display:flex; flex-direction:column; gap:10px; }
+
+  .note{
+    font-size:.8rem; color:var(--muted); line-height:1.4;
+    background:#0b0d12; border:1px dashed #2a3242; border-radius:8px; padding:8px;
+  }
+
+  .list{
+    display:grid; gap:8px; margin-top:12px;
+  }
+  .item{
+    display:flex; align-items:center; gap:10px;
+    padding:10px; border-radius:10px;
+    background:linear-gradient(180deg, #0f1219, #0b0d12);
+    border:1px solid #2a3242;
+    transition:.15s background, .15s border;
+  }
+  .item.dragging{ opacity:.6; border-style:dashed; }
+  .item .handle{
+    width:14px; height:18px; opacity:.6; cursor:grab;
+    background:
+      conic-gradient(from 90deg, transparent 0 25%, currentColor 0 50%, transparent 0 75%, currentColor 0) 0 0 / 6px 6px;
+    color:#3a4256;
+  }
+  .item .icon{
+    width:32px; height:32px; display:grid; place-items:center;
+    border-radius:8px; border:1px solid #3b3f47;
+    background:linear-gradient(180deg, #1e2535, #151b28);
+    flex:0 0 auto; overflow:hidden;
+  }
+  .item .icon img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .item .meta{ display:flex; flex-direction:column; min-width:0; }
+  .item .meta .name{ font-weight:700; }
+  .item .meta .url{ color:var(--muted); font-size:.8rem; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:320px; }
+  .item .actions{ margin-left:auto; display:flex; gap:6px; }
+  .item .actions .small{
+    font-size:.8rem; padding:6px 8px; border-radius:7px;
+    background: #121724;
+  }
+
+  /* Main board */
+  main{
+    grid-row: 2; overflow:auto;
+    padding:24px 24px 56px;
+  }
+
+  .board{
+    display:grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap:16px;
+  }
+
+  .card{
+    grid-column: span 6;
+    background: linear-gradient(180deg, rgba(31,42,68,.24), rgba(20,26,39,.28));
+    border:1px solid #2a3242; border-radius: var(--radius);
+    padding:16px;
+    box-shadow: var(--glow);
+    min-height: 160px;
+  }
+  @media (max-width: 1100px){ .card{ grid-column: span 12; } }
+
+  .card h3{
+    margin:0 0 10px 0; font-size:1rem; color:var(--gold); letter-spacing:.06em; text-transform:uppercase;
+  }
+  .hero{
+    position:relative; overflow:hidden;
+    border-radius:10px; border:1px solid #2a3242;
+    min-height:140px; display:grid; place-items:center;
+    background:
+      radial-gradient(800px 180px at 50% 0%, rgba(177,42,42,.35), transparent 60%),
+      linear-gradient(180deg, #0e1117, #0a0c10);
+  }
+  .hero .motto{
+    text-align:center; padding:10px; max-width:72ch; color:#e8e1d2;
+    text-shadow: 0 1px 0 #000, 0 0 24px rgba(198,166,100,.25);
+    font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+  }
+  .hero .motto span{ color:var(--gold); }
+
+  /* Tooltip */
+  .tip{
+    position:relative;
+  }
+  .tip:hover::after{
+    content:attr(data-tip);
+    position:absolute; top:-8px; left:50%; transform:translate(-50%, -100%);
+    background:#0b0d12; color:var(--ink); padding:6px 8px; border-radius:6px;
+    font-size:.75rem; white-space:nowrap; border:1px solid #2a3242;
+    box-shadow: 0 8px 20px rgba(0,0,0,.4);
+    pointer-events:none;
+  }
+
+  a.clean{ color:inherit; text-decoration:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="sigil" title="Imperium Launchpad">
+      <!-- A simple non-trademarky skull + wings motif -->
+      <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#d2b97c"/>
+            <stop offset="1" stop-color="#947b44"/>
+          </linearGradient>
+        </defs>
+        <path d="M10 30 Q20 24 28 24 L36 24 Q44 24 54 30" stroke="url(#g)" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="32" cy="36" r="10" fill="url(#g)" />
+        <rect x="26" y="44" width="12" height="6" rx="2" fill="#2b2315" />
+      </svg>
+    </div>
+    <div class="title">
+      <strong>Sector Command</strong>
+      <div class="subtitle">Warhammer‑themed quick launch & dashboard</div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside>
+    <div class="panel">
+      <h2>Sidebar Links</h2>
+
+      <div class="controls">
+        <button class="btn" id="btn-add">+ Add Link</button>
+        <button class="btn" id="btn-clear">Reset</button>
+      </div>
+
+      <div class="stack" id="form" style="display:none;">
+        <div class="grid-2">
+          <div class="input">
+            <label for="name">Name</label>
+            <input id="name" placeholder="e.g., Codex, Forge, Steam" />
+          </div>
+          <div class="input">
+            <label for="url">URL / Protocol</label>
+            <input id="url" placeholder="https://…, steam://…, vscode://…" />
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="input">
+            <label for="icon">Icon URL (optional)</label>
+            <input id="icon" placeholder="https://…/icon.png" />
+          </div>
+          <div class="input">
+            <label for="bg">Icon BG (hex/rgb)</label>
+            <input id="bg" placeholder="#1e2535" />
+          </div>
+          <div class="input">
+            <label for="abbr">Fallback Text</label>
+            <input id="abbr" placeholder="WH, ST, VS…" />
+          </div>
+        </div>
+        <div class="controls">
+          <button class="btn" id="btn-save">Save</button>
+          <button class="btn" id="btn-cancel">Cancel</button>
+        </div>
+        <div class="note">
+          ⚠️ Browsers may block launching local programs. Custom protocols like
+          <code>steam://</code>, <code>vscode://</code>, <code>mailto:</code> usually work.
+          For local files use a local web server for best results.
+        </div>
+      </div>
+
+      <div class="list" id="link-list" aria-live="polite"></div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main>
+    <div class="board">
+      <section class="card" style="grid-column: span 12;">
+        <div class="hero">
+          <div class="motto">
+            <span>In the grim darkness</span> of the far future there is only deployment.
+            <br/>Forge your own command panel: sanctify links, marshal tools, and strike fast.
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Suggested Protocols</h3>
+        <ul class="note">
+          <li><code>https://example.com</code> – any website</li>
+          <li><code>steam://rungameid/570</code> – Steam app or game</li>
+          <li><code>vscode://file/c:/Projects</code> – Visual Studio Code</li>
+          <li><code>mailto:someone@domain</code> – email</li>
+          <li><code>ms-settings:appsfeatures</code> – Windows Settings (Edge/Windows only)</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h3>Tips</h3>
+        <ul class="note">
+          <li>Drag the grip on the left of each link to reorder your arsenal.</li>
+          <li>Click the pencil to edit; trash to purge heresy.</li>
+          <li>Use square PNG/SVG icons for best results. Transparent backgrounds look great.</li>
+        </ul>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+  (function(){
+    const STORE_KEY = "wh_links_v1";
+    const listEl = document.getElementById("link-list");
+    const btnAdd = document.getElementById("btn-add");
+    const btnClear = document.getElementById("btn-clear");
+    const formWrap = document.getElementById("form");
+    const btnSave = document.getElementById("btn-save");
+    const btnCancel = document.getElementById("btn-cancel");
+
+    const $ = id => document.getElementById(id);
+    const fields = {
+      name: $("name"),
+      url: $("url"),
+      icon: $("icon"),
+      bg: $("bg"),
+      abbr: $("abbr"),
+    };
+
+    let editingIndex = null;
+    let dragSrcIndex = null;
+
+    function load(){
+      try{
+        const raw = localStorage.getItem(STORE_KEY);
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) return [];
+        return arr;
+      }catch(e){ return []; }
+    }
+
+    function save(arr){
+      localStorage.setItem(STORE_KEY, JSON.stringify(arr));
+    }
+
+    function seedIfEmpty(){
+      let data = load();
+      if (data.length) return;
+      data = [
+        { name:"Lexicanum", url:"https://wh40k.lexicanum.com/", icon:"https://www.google.com/s2/favicons?sz=64&domain=lexicanum.com", bg:"#1e2535", abbr:"LX" },
+        { name:"Warhammer Community", url:"https://www.warhammer-community.com/", icon:"https://www.google.com/s2/favicons?sz=64&domain=warhammer-community.com", bg:"#19202e", abbr:"WH" },
+        { name:"Steam", url:"steam://open", icon:"https://www.google.com/s2/favicons?sz=64&domain=steampowered.com", bg:"#101826", abbr:"ST" },
+      ];
+      save(data);
+    }
+
+    function render(){
+      const data = load();
+      listEl.innerHTML = "";
+      data.forEach((item, idx) => {
+        const el = document.createElement("div");
+        el.className = "item";
+        el.setAttribute("draggable", "true");
+        el.dataset.index = idx;
+
+        const handle = document.createElement("div");
+        handle.className = "handle";
+        handle.title = "Drag to reorder";
+
+        const icon = document.createElement("div");
+        icon.className = "icon";
+        if (item.bg) icon.style.background = item.bg;
+        if (item.icon){
+          const img = document.createElement("img");
+          img.src = item.icon;
+          img.alt = "";
+          icon.appendChild(img);
+        } else {
+          const span = document.createElement("span");
+          span.style.fontWeight = "800";
+          span.style.letterSpacing = ".06em";
+          span.textContent = (item.abbr || item.name?.slice(0,2) || "??").toUpperCase();
+          icon.appendChild(span);
+        }
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const name = document.createElement("div");
+        name.className = "name";
+        name.textContent = item.name || "(unnamed)";
+
+        const url = document.createElement("a");
+        url.className = "url clean tip";
+        url.href = item.url || "#";
+        url.target = "_blank";
+        url.rel = "noopener";
+        url.textContent = item.url || "";
+        url.dataset.tip = "Open";
+
+        meta.appendChild(name);
+        meta.appendChild(url);
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const bOpen = document.createElement("button");
+        bOpen.className = "btn small";
+        bOpen.textContent = "Open";
+        bOpen.addEventListener("click", () => window.open(item.url, "_blank", "noopener"));
+
+        const bEdit = document.createElement("button");
+        bEdit.className = "btn small";
+        bEdit.textContent = "Edit";
+        bEdit.addEventListener("click", () => {
+          editingIndex = idx;
+          fields.name.value = item.name || "";
+          fields.url.value = item.url || "";
+          fields.icon.value = item.icon || "";
+          fields.bg.value = item.bg || "";
+          fields.abbr.value = item.abbr || "";
+          formWrap.style.display = "block";
+          fields.name.focus();
+        });
+
+        const bDel = document.createElement("button");
+        bDel.className = "btn small";
+        bDel.style.background = "linear-gradient(180deg, #2a1212, #1a0d0d)";
+        bDel.style.borderColor = "#3a1414";
+        bDel.textContent = "Delete";
+        bDel.addEventListener("click", () => {
+          const data = load();
+          data.splice(idx,1);
+          save(data);
+          render();
+        });
+
+        actions.append(bOpen, bEdit, bDel);
+
+        el.append(handle, icon, meta, actions);
+
+        // Drag & drop logic
+        el.addEventListener("dragstart", (e) => {
+          dragSrcIndex = idx;
+          el.classList.add("dragging");
+          e.dataTransfer.effectAllowed = "move";
+        });
+        el.addEventListener("dragend", () => {
+          el.classList.remove("dragging");
+        });
+        el.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        });
+        el.addEventListener("drop", (e) => {
+          e.preventDefault();
+          const targetIndex = Number(el.dataset.index);
+          if (dragSrcIndex === null || targetIndex === dragSrcIndex) return;
+          const arr = load();
+          const [moved] = arr.splice(dragSrcIndex,1);
+          arr.splice(targetIndex, 0, moved);
+          save(arr);
+          dragSrcIndex = null;
+          render();
+        });
+
+        listEl.appendChild(el);
+      });
+    }
+
+    function showForm(show){
+      formWrap.style.display = show ? "block" : "none";
+      if (!show){
+        editingIndex = null;
+        Object.values(fields).forEach(input => input.value = "");
+      }
+    }
+
+    btnAdd.addEventListener("click", () => {
+      editingIndex = null;
+      showForm(true);
+      fields.name.focus();
+    });
+
+    btnCancel.addEventListener("click", () => showForm(false));
+
+    btnSave.addEventListener("click", () => {
+      const item = {
+        name: fields.name.value.trim(),
+        url: fields.url.value.trim(),
+        icon: fields.icon.value.trim(),
+        bg: fields.bg.value.trim(),
+        abbr: fields.abbr.value.trim(),
+      };
+      if (!item.url){
+        alert("Please enter a URL or protocol.");
+        return;
+      }
+      const data = load();
+      if (editingIndex === null){
+        data.push(item);
+      } else {
+        data[editingIndex] = item;
+      }
+      save(data);
+      render();
+      showForm(false);
+    });
+
+    btnClear.addEventListener("click", () => {
+      if (confirm("Reset all links to defaults?")){
+        localStorage.removeItem(STORE_KEY);
+        seedIfEmpty();
+        render();
+      }
+    });
+
+    // Initialize
+    seedIfEmpty();
+    render();
+  })();
+</script>
+</body>
+</html>
